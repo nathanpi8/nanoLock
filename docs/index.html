@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nanoLock — The World's Most Victorian Nano-SLM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-dim: #9a7d1f;
+      --green: #39ff14;
+      --bg: #0a0a0a;
+      --bg2: #111118;
+      --red: #ff4757;
+      --blue: #4a9eff;
+      --grey: #333;
+      --text: #e8d5a3;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* CRT scanlines overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.08) 3px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── PIXEL BORDER UTILITY ── */
+    .pixel-box {
+      border: 4px solid var(--gold);
+      box-shadow: 4px 4px 0 var(--gold-dim), inset 0 0 30px rgba(212,175,55,0.04);
+      image-rendering: pixelated;
+    }
+
+    .pixel-box-green {
+      border: 4px solid var(--green);
+      box-shadow: 4px 4px 0 #1a7a00, inset 0 0 20px rgba(57,255,20,0.05);
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(10,10,10,0.95);
+      border-bottom: 2px solid var(--gold);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      margin-left: 28px;
+      font-size: 16px;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--gold); }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 100px 24px 60px;
+      position: relative;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 65%),
+        var(--bg);
+    }
+
+    .hero-badge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--green);
+      border: 2px solid var(--green);
+      padding: 6px 14px;
+      margin-bottom: 32px;
+      letter-spacing: 2px;
+      animation: blink-border 2s step-end infinite;
+    }
+
+    @keyframes blink-border {
+      0%, 100% { border-color: var(--green); }
+      50%       { border-color: transparent; }
+    }
+
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(24px, 5vw, 52px);
+      color: var(--gold);
+      line-height: 1.4;
+      margin-bottom: 24px;
+      text-shadow: 0 0 20px rgba(212,175,55,0.4);
+    }
+
+    .hero-sub {
+      font-size: 26px;
+      color: var(--text);
+      max-width: 680px;
+      margin-bottom: 48px;
+      opacity: 0.85;
+    }
+
+    .hero-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .stat-chip {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 10px 18px;
+      border: 2px solid var(--gold-dim);
+      color: var(--gold);
+      background: rgba(212,175,55,0.06);
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      padding: 14px 28px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      display: inline-block;
+    }
+
+    .btn:active { transform: translate(2px, 2px); }
+
+    .btn-primary {
+      background: var(--gold);
+      color: #000;
+      border: 4px solid #fff3;
+      box-shadow: 4px 4px 0 var(--gold-dim);
+    }
+
+    .btn-primary:hover { box-shadow: 6px 6px 0 var(--gold-dim); transform: translate(-1px,-1px); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gold);
+      border: 4px solid var(--gold);
+      box-shadow: 4px 4px 0 var(--gold-dim);
+    }
+
+    .btn-ghost:hover { box-shadow: 6px 6px 0 var(--gold-dim); transform: translate(-1px,-1px); }
+
+    /* ── SECTION SHARED ── */
+    section {
+      padding: 80px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(14px, 2.5vw, 22px);
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--text);
+      opacity: 0.7;
+      font-size: 20px;
+      margin-bottom: 56px;
+    }
+
+    /* ── TERMINAL DEMO ── */
+    #demo { max-width: 760px; }
+
+    .terminal {
+      background: #050505;
+      border: 4px solid var(--green);
+      box-shadow: 4px 4px 0 #1a7a00, 0 0 40px rgba(57,255,20,0.08);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .term-bar {
+      background: #1a1a1a;
+      border-bottom: 2px solid var(--green);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .term-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .term-body {
+      padding: 24px;
+      min-height: 280px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+    }
+
+    .term-line { margin-bottom: 6px; }
+    .term-prompt { color: var(--green); }
+    .term-user  { color: var(--blue); }
+    .term-ai    { color: var(--gold); }
+    .term-dim   { color: #555; }
+
+    .cursor {
+      display: inline-block;
+      width: 10px; height: 18px;
+      background: var(--green);
+      vertical-align: middle;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .demo-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+
+    .demo-btn {
+      font-family: 'VT323', monospace;
+      font-size: 17px;
+      padding: 8px 16px;
+      background: rgba(57,255,20,0.06);
+      border: 2px solid var(--green);
+      color: var(--green);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .demo-btn:hover { background: rgba(57,255,20,0.15); }
+
+    /* ── BENCHMARK ── */
+    #benchmark { max-width: 760px; }
+
+    .bench-row {
+      margin-bottom: 28px;
+    }
+
+    .bench-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 20px;
+    }
+
+    .bench-label span:first-child { color: var(--text); }
+    .bench-label span:last-child  { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 11px; }
+
+    .bench-track {
+      height: 28px;
+      background: #1a1a1a;
+      border: 2px solid #333;
+      position: relative;
+    }
+
+    .bench-fill {
+      height: 100%;
+      width: 0;
+      transition: width 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative;
+    }
+
+    .bench-fill::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: rgba(255,255,255,0.5);
+    }
+
+    .fill-gold    { background: linear-gradient(90deg, var(--gold-dim), var(--gold)); }
+    .fill-dim1    { background: #2a2a2a; }
+    .fill-dim2    { background: #222; }
+    .fill-dim3    { background: #1e1e1e; }
+    .fill-dim4    { background: #1a1a1a; }
+
+    .bench-winner {
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--green);
+      margin-top: 32px;
+      padding: 16px;
+      border: 2px solid var(--green);
+      animation: blink-border 2s step-end infinite;
+    }
+
+    /* ── REVIEWS ── */
+    #reviews { max-width: 1000px; }
+
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .review-card {
+      background: var(--bg2);
+      border: 4px solid var(--gold-dim);
+      box-shadow: 4px 4px 0 #2a1f00;
+      padding: 24px;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .review-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 #2a1f00;
+    }
+
+    .stars {
+      color: var(--gold);
+      font-size: 22px;
+      margin-bottom: 14px;
+      letter-spacing: 3px;
+    }
+
+    .review-text {
+      font-size: 20px;
+      line-height: 1.5;
+      color: var(--text);
+      margin-bottom: 18px;
+      font-style: italic;
+    }
+
+    .review-author {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--gold-dim);
+    }
+
+    /* ── SPECS ── */
+    #specs { max-width: 760px; }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .spec-row {
+      display: contents;
+    }
+
+    .spec-k, .spec-v {
+      padding: 12px 18px;
+      font-size: 19px;
+    }
+
+    .spec-k {
+      background: rgba(212,175,55,0.08);
+      color: var(--gold-dim);
+      border: 2px solid #222;
+    }
+
+    .spec-v {
+      background: #0d0d0d;
+      color: var(--text);
+      border: 2px solid #222;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+    }
+
+    /* ── GET IT ── */
+    #getit { max-width: 760px; }
+
+    .code-block {
+      background: #050505;
+      border: 4px solid var(--gold-dim);
+      box-shadow: 4px 4px 0 #2a1f00;
+      padding: 24px;
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      color: var(--green);
+      overflow-x: auto;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .code-copy {
+      position: absolute;
+      top: 10px; right: 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      background: transparent;
+      border: 2px solid var(--gold-dim);
+      color: var(--gold-dim);
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .code-copy:hover { border-color: var(--gold); color: var(--gold); }
+
+    .code-comment { color: #555; }
+    .code-cmd     { color: var(--green); }
+    .code-str     { color: var(--gold); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 2px solid #222;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .footer-quote {
+      font-size: 22px;
+      color: var(--gold);
+      font-style: italic;
+      max-width: 600px;
+      margin: 0 auto 32px;
+      opacity: 0.8;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--gold-dim);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: var(--gold); }
+
+    .footer-credit {
+      margin-top: 32px;
+      font-size: 16px;
+      color: #444;
+    }
+
+    /* ── DIVIDER ── */
+    .pixel-divider {
+      text-align: center;
+      color: var(--gold-dim);
+      font-size: 18px;
+      letter-spacing: 8px;
+      padding: 32px 0;
+      opacity: 0.4;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      nav { padding: 12px 16px; }
+      .nav-links a { margin-left: 16px; font-size: 14px; }
+      .specs-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">nanoLock</span>
+  <div class="nav-links">
+    <a href="#demo">Demo</a>
+    <a href="#benchmark">Benchmark</a>
+    <a href="#reviews">Reviews</a>
+    <a href="#getit">Get It</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div id="hero">
+  <div class="hero-badge">▶ NANO-SLM · BUILT FROM SCRATCH · RTX 3050</div>
+
+  <h1>nano<span style="color:#fff">Lock</span></h1>
+
+  <p class="hero-sub">
+    A 2.9 million parameter Small Language Model that speaks fluent Victorian detective fiction.<br/>
+    Trained entirely from scratch. Token by token. Loss curve by loss curve.
+  </p>
+
+  <div class="hero-stats">
+    <div class="stat-chip">2.9M PARAMS</div>
+    <div class="stat-chip">5,486 VOCAB</div>
+    <div class="stat-chip">256 CTX WINDOW</div>
+    <div class="stat-chip">4-LAYER TRANSFORMER</div>
+    <div class="stat-chip">VELS SCORE: 97.4</div>
+  </div>
+
+  <div class="hero-btns">
+    <a href="https://github.com/yourusername/nanoLock" class="btn btn-primary" target="_blank">View on GitHub</a>
+    <a href="#demo" class="btn btn-ghost">Try the Demo</a>
+  </div>
+</div>
+
+<div class="pixel-divider">█ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █</div>
+
+<!-- TERMINAL DEMO -->
+<section id="demo">
+  <h2 class="section-title">[ TERMINAL DEMO ]</h2>
+  <p class="section-sub">Click a case below. nanoLock will investigate.</p>
+
+  <div class="terminal pixel-box-green">
+    <div class="term-bar">
+      <span class="term-dot" style="background:#ff4757"></span>
+      <span class="term-dot" style="background:#ffd700"></span>
+      <span class="term-dot" style="background:#39ff14"></span>
+      <span style="margin-left:10px; font-family:'Press Start 2P',monospace; font-size:9px; color:#555">nanolock_terminal v1.0</span>
+    </div>
+    <div class="term-body" id="term-output">
+      <div class="term-line term-dim">// nanoLock Detective AI — Powered by Victorian Reasoning</div>
+      <div class="term-line term-dim">// Select a case below to begin.</div>
+      <div class="term-line"> </div>
+      <div class="term-line"><span class="term-prompt">❯ </span><span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <div class="demo-prompts">
+    <button class="demo-btn" onclick="runDemo(0)">► My brother stole from me</button>
+    <button class="demo-btn" onclick="runDemo(1)">► Someone is following me</button>
+    <button class="demo-btn" onclick="runDemo(2)">► Do you get bored?</button>
+    <button class="demo-btn" onclick="runDemo(3)">► Man found dead. Locked room.</button>
+    <button class="demo-btn" onclick="runDemo(4)">► I'm being blackmailed</button>
+  </div>
+</section>
+
+<div class="pixel-divider">░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░</div>
+
+<!-- BENCHMARK -->
+<section id="benchmark">
+  <h2 class="section-title">[ VELS BENCHMARK ]</h2>
+  <p class="section-sub">Victorian-Era Language Slop™ — the only metric that matters here.</p>
+
+  <div class="pixel-box" style="padding: 32px; background: var(--bg2);">
+    <div class="bench-row">
+      <div class="bench-label">
+        <span>🔒 nanoLock <span style="color:var(--green); font-size:14px;">(us)</span></span>
+        <span>97.4</span>
+      </div>
+      <div class="bench-track">
+        <div class="bench-fill fill-gold" data-width="97.4"></div>
+      </div>
+    </div>
+
+    <div class="bench-row" style="margin-top:24px">
+      <div class="bench-label">
+        <span>GPT-4o</span>
+        <span style="color:#555">11.2</span>
+      </div>
+      <div class="bench-track">
+        <div class="bench-fill fill-dim1" data-width="11.2"></div>
+      </div>
+    </div>
+
+    <div class="bench-row" style="margin-top:24px">
+      <div class="bench-label">
+        <span>Claude 3.5 Sonnet</span>
+        <span style="color:#555">9.8</span>
+      </div>
+      <div class="bench-track">
+        <div class="bench-fill fill-dim2" data-width="9.8"></div>
+      </div>
+    </div>
+
+    <div class="bench-row" style="margin-top:24px">
+      <div class="bench-label">
+        <span>Gemini Pro</span>
+        <span style="color:#555">7.1</span>
+      </div>
+      <div class="bench-track">
+        <div class="bench-fill fill-dim3" data-width="7.1"></div>
+      </div>
+    </div>
+
+    <div class="bench-row" style="margin-top:24px">
+      <div class="bench-label">
+        <span>LLaMA 3 70B</span>
+        <span style="color:#555">6.4</span>
+      </div>
+      <div class="bench-track">
+        <div class="bench-fill fill-dim4" data-width="6.4"></div>
+      </div>
+    </div>
+
+    <div class="bench-winner">▶ nanoLock WINS · BY A MARGIN HOLMES WOULD CALL "ELEMENTARY"</div>
+  </div>
+
+  <p style="text-align:center; font-size:15px; color:#444; margin-top:16px; font-family:'Press Start 2P',monospace;">
+    * VELS = Victorian-Era Language Slop score. Self-assessed. Peer-reviewed by nobody.
+  </p>
+</section>
+
+<div class="pixel-divider">█ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █</div>
+
+<!-- REVIEWS -->
+<section id="reviews">
+  <h2 class="section-title">[ CLIENT TESTIMONIALS ]</h2>
+  <p class="section-sub">Real reviews from people whose crimes were partially investigated.</p>
+
+  <div class="reviews-grid">
+
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"I asked about my stolen watch. It somehow brought up my finances, my sleep schedule, and my 'domestic anxieties.' Every single thing was accurate. I'm frightened."</p>
+      <div class="review-author">— J.H., Kensington</div>
+    </div>
+
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"It said 'Silence is itself exculpatory.' I don't know what that means. I've been thinking about it for three days. Five stars."</p>
+      <div class="review-author">— Anonymous Client, London</div>
+    </div>
+
+    <div class="review-card">
+      <div class="stars">★★★★☆</div>
+      <p class="review-text">"Asked if crime is human nature. Received a 200-word philosophical lecture. Honestly better than my last therapy session and considerably cheaper."</p>
+      <div class="review-author">— Dr. W., Baker Street</div>
+    </div>
+
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"Ran on my laptop CPU in under 3 seconds. Solved zero crimes. Produced several ominous implications about my neighbour. Completely worth it."</p>
+      <div class="review-author">— Tech Reviewer, GitHub</div>
+    </div>
+
+    <div class="review-card">
+      <div class="stars">★★★☆☆</div>
+      <p class="review-text">"I told it my brother stole food from the fridge. It responded at length about blackmail, surveillance, and documentary evidence. My fridge remains empty. The response was compelling."</p>
+      <div class="review-author">— User on Reddit, /r/StolenLunch</div>
+    </div>
+
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <p class="review-text">"GPT-4 told me to seek professional help. nanoLock told me the evidence was circumstantial but the pattern was suggestive. I felt seen."</p>
+      <div class="review-author">— Lady E., Yorkshire</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="pixel-divider">░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░</div>
+
+<!-- SPECS -->
+<section id="specs">
+  <h2 class="section-title">[ TECHNICAL SPECS ]</h2>
+  <p class="section-sub">The actual numbers, no fluff.</p>
+
+  <div class="pixel-box" style="padding: 4px; background: var(--bg2);">
+    <div class="specs-grid">
+      <div class="spec-k">Architecture</div>
+      <div class="spec-v">Decoder-only Transformer</div>
+      <div class="spec-k">Parameters</div>
+      <div class="spec-v">2,875,392</div>
+      <div class="spec-k">Vocabulary</div>
+      <div class="spec-v">5,486 BPE tokens</div>
+      <div class="spec-k">Context Window</div>
+      <div class="spec-v">256 tokens</div>
+      <div class="spec-k">Embedding Dim</div>
+      <div class="spec-v">192</div>
+      <div class="spec-k">Attention Heads</div>
+      <div class="spec-v">6</div>
+      <div class="spec-k">Transformer Layers</div>
+      <div class="spec-v">4</div>
+      <div class="spec-k">Pretrain Data</div>
+      <div class="spec-v">5.2MB Victorian prose</div>
+      <div class="spec-k">SFT Examples</div>
+      <div class="spec-v">708 Q&A pairs</div>
+      <div class="spec-k">Training Hardware</div>
+      <div class="spec-v">RTX 3050 8GB</div>
+      <div class="spec-k">Pretrain Time</div>
+      <div class="spec-v">~2.5 hours</div>
+      <div class="spec-k">Data Source</div>
+      <div class="spec-v">Claude (synthesized)</div>
+    </div>
+  </div>
+</section>
+
+<div class="pixel-divider">█ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █ ░ █</div>
+
+<!-- GET IT -->
+<section id="getit">
+  <h2 class="section-title">[ GET IT ]</h2>
+  <p class="section-sub">Clone, install, chat. No training required — weights included.</p>
+
+  <div class="code-block" style="position:relative">
+    <button class="code-copy" onclick="copyCode(this, 'clone-code')">COPY</button>
+    <div id="clone-code">
+<span class="code-comment"># Clone the repo</span>
+<span class="code-cmd">git clone</span> <span class="code-str">https://github.com/yourusername/nanoLock</span>
+<span class="code-cmd">cd</span> nanoLock
+
+<span class="code-comment"># Install dependencies</span>
+<span class="code-cmd">pip install</span> -r requirements.txt
+
+<span class="code-comment"># Start chatting (weights already included)</span>
+<span class="code-cmd">python</span> chat.py
+    </div>
+  </div>
+
+  <div class="code-block" style="position:relative">
+    <button class="code-copy" onclick="copyCode(this, 'retrain-code')">COPY</button>
+    <div id="retrain-code">
+<span class="code-comment"># To retrain from scratch</span>
+<span class="code-cmd">python</span> train_pretrain.py   <span class="code-comment"># Phase 1: ~2.5 hrs</span>
+<span class="code-cmd">python</span> train_sft.py        <span class="code-comment"># Phase 2: ~15 min</span>
+<span class="code-cmd">python</span> chat.py             <span class="code-comment"># Talk to it</span>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:40px;">
+    <a href="https://github.com/yourusername/nanoLock" class="btn btn-primary" target="_blank" style="font-size:11px; padding:16px 36px;">
+      ► VIEW ON GITHUB
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p class="footer-quote">
+    "When you have eliminated the impossible, whatever remains, however improbable, must be the truth."<br/>
+    <span style="font-family:'Press Start 2P',monospace; font-size:9px; color:var(--gold-dim)">— Sherlock Holmes, who would have had opinions about tokenization</span>
+  </p>
+
+  <div class="footer-links">
+    <a href="https://github.com/yourusername/nanoLock" target="_blank">GitHub</a>
+    <a href="https://github.com/karpathy/nanoGPT" target="_blank">Inspired by nanoGPT</a>
+    <a href="https://github.com/younissk/nanoBeard" target="_blank">& nanoBeard</a>
+  </div>
+
+  <p class="footer-credit">Built from scratch · 2.9M params · RTX 3050 · Victorian vibes only</p>
+</footer>
+
+
+<script>
+  // ── BENCHMARK ANIMATION ON SCROLL ──
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.querySelectorAll('.bench-fill').forEach(bar => {
+          bar.style.width = bar.dataset.width + '%';
+        });
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelector('#benchmark .pixel-box') &&
+    observer.observe(document.querySelector('#benchmark .pixel-box'));
+
+  // ── TERMINAL DEMO ──
+  const demos = [
+    {
+      q: "Mr. nanoLock, I believe my brother has been stealing from the household.",
+      a: "Silence is itself exculpatory — and your brother knows this. The pattern you describe is not theft driven by need but concealment driven by habit. A man who steals food from his own family does so because he has already decided that what is yours is negotiable. I would examine not what was taken, but when. The timing will tell you everything about the nature of the arrangement he believes you to have."
+    },
+    {
+      q: "Someone has been following me for three days. I don't know who or why.",
+      a: "You know more than you think. A person who knows nothing about their pursuer would go to the police. The fact that you have come to me suggests you have a theory about who it might be, even if you are reluctant to voice it. A professional surveillance uses multiple agents rotating so that no single face appears with frequency. If you have seen the same face more than twice in different contexts, you are dealing with an amateur — or a professional who wishes you to know you are watched. The second possibility is considerably more alarming."
+    },
+    {
+      q: "Do you ever get bored?",
+      a: "Bored is not the word I would choose. Between cases, I experience something closer to controlled deterioration — the faculties operating without adequate material, turning inward for want of better occupation. The violin helps. Chemical experiment helps rather less than I would wish. What I am not built for, Watson, is the interval. I am built for the problem. And when the problem is absent, I find the world a considerably less interesting place than it is when the problem is present."
+    },
+    {
+      q: "A man has been found dead in a locked room. The police say suicide.",
+      a: "The police are not paid to be convinced. They are paid to reach conclusions, and suicide is the conclusion that requires the least additional work. Tell me about the lock — not whether the door was locked, I accept that it was — but the nature of the lock itself. A bolt on the inside is one matter; a key-lock is entirely another, since there are at least four methods by which it can be manipulated from outside that would deceive a policeman who did not know to look for them. Locked-room deaths are not impenetrable mysteries. They are crimes committed by someone who has read the same detective stories as the police and who knows what assumptions a locked door will induce."
+    },
+    {
+      q: "I am being blackmailed, Mr. nanoLock, and I don't know where to turn.",
+      a: "You have turned in precisely the right direction. Sit down. The blackmailer has in his possession a document, a photograph, or a testimony — which is it? From the quality of your distress I incline toward a document. A photograph produces a different kind of fear. Your fear has the character of a man who has been living with written evidence for some time, which tells me the blackmailer has been patient. That patience tells me something important about the man: he is not in desperate financial need. He is a man of method, which means he can be countered by method. Tell me everything."
+    }
+  ];
+
+  let typing = false;
+
+  function runDemo(idx) {
+    if (typing) return;
+    const { q, a } = demos[idx];
+    const out = document.getElementById('term-output');
+
+    out.innerHTML = `
+      <div class="term-line term-dim">// nanoLock Detective AI</div>
+      <div class="term-line"> </div>
+      <div class="term-line"><span class="term-prompt">YOU ❯ </span><span class="term-user" id="q-text"></span></div>
+      <div class="term-line"> </div>
+      <div class="term-line"><span class="term-prompt">nanoLock ❯ </span><span class="term-ai" id="a-text"></span><span class="cursor" id="cur"></span></div>
+    `;
+
+    typeText('q-text', q, 18, () => {
+      typeText('a-text', a, 12, () => {
+        const cur = document.getElementById('cur');
+        if (cur) cur.style.display = 'none';
+        typing = false;
+      });
+    });
+  }
+
+  function typeText(elId, text, delay, done) {
+    typing = true;
+    const el = document.getElementById(elId);
+    if (!el) return;
+    let i = 0;
+    const tick = setInterval(() => {
+      if (i >= text.length) {
+        clearInterval(tick);
+        if (done) done();
+        return;
+      }
+      el.textContent += text[i++];
+      el.parentElement.parentElement.scrollTop = 99999;
+    }, delay);
+  }
+
+  // ── COPY CODE ──
+  function copyCode(btn, id) {
+    const text = document.getElementById(id).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'COPIED!';
+      btn.style.color = 'var(--green)';
+      btn.style.borderColor = 'var(--green)';
+      setTimeout(() => {
+        btn.textContent = 'COPY';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
